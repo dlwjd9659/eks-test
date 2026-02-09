@@ -11,10 +11,10 @@ spec:
       protocol: TCP
       port: 80 # 로드밸런서가 외부에서 받는 포트
       targetPort: 80 # 실제 파드로 전달되는 포트
-    - name: custom-port # [리스너 2] 추가된 리스너
-      protocol: TCP
-      port: 8000 # 외부에서 8080으로 접속하면
-      targetPort: 8000 # 파드의 80번으로 전달 (포트 포워딩 역할)
+        #    - name: custom-port # [리스너 2] 추가된 리스너
+        #      protocol: TCP
+        #      port: 8000 # 외부에서 8080으로 접속하면
+        #      targetPort: 8000 # 파드의 80번으로 전달 (포트 포워딩 역할)
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -41,13 +41,13 @@ spec:
                 name: web-project-svc # 서비스 이름과 일치해야 함
                 port:
                   number: 80
-          - path: /api
-            pathType: Prefix
-            backend:
-              service:
-                name: web-project-svc # 서비스 이름과 일치해야 함
-                port:
-                  number: 8000
+                    #          - path: /api
+                    #            pathType: Prefix
+                    #            backend:
+                    #              service:
+                    #                name: web-project-svc # 서비스 이름과 일치해야 함
+                    #                port:
+                    #                  number: 8000
 ---
 # ---------------------------------------------------------
 # 2. Deployment: 애플리케이션(Nginx) 컨테이너 실행 정의
