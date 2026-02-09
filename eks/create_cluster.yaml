@@ -1,0 +1,39 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: moon-cluster-3           # 하이픈 제거, 소문자만 사용
+  region: ap-northeast-2
+  version: "1.31"
+vpc:
+  id: "vpc-07bcbcf4e5eb9d1dc"
+  subnets:
+    public:
+      ap-northeast-2a: { id: "subnet-07920224047502b45" }
+      ap-northeast-2b: { id: "subnet-0c907d4f0256af257" }
+      ap-northeast-2c: { id: "subnet-0219251194609f9df" }
+    private:
+      ap-northeast-2a: { id: "subnet-0e4f8d3e19985b58f" }
+      ap-northeast-2b: { id: "subnet-0799c0df17607f482" }
+      ap-northeast-2c: { id: "subnet-08651ca9bb6fb9950" }
+  clusterEndpoints:
+    publicAccess: true
+    privateAccess: true
+managedNodeGroups:
+  - name: moon-nodegroup-3        # 하이픈 제거, 소문자만 사용
+    instanceType: t3.medium
+    minSize: 1
+    maxSize: 3
+    desiredCapacity: 2
+    volumeSize: 20
+    privateNetworking: true
+    iam:
+      withAddonPolicies:
+        imageBuilder: true
+        autoScaler: true
+        albIngress: true
+        cloudWatch: true
+        ebs: true
+        certManager: true
+        externalDNS: true
+iam:
+  withOIDC: true

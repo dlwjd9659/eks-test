@@ -1,0 +1,46 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: moon-cluster
+  region: ap-northeast-2
+  version: "1.31"
+vpc:
+  id: "vpc-07bcbcf4e5eb9d1dc"
+  subnets:
+    public:
+      ap-northeast-2a: { id: "subnet-07920224047502b45" }
+      ap-northeast-2b: { id: "subnet-0c907d4f0256af257" }
+      ap-northeast-2c: { id: "subnet-0219251194609f9df" }
+    private:
+      ap-northeast-2a: { id: "subnet-0e4f8d3e19985b58f" }
+      ap-northeast-2b: { id: "subnet-0799c0df17607f482" }
+      ap-northeast-2c: { id: "subnet-08651ca9bb6fb9950" }
+
+  clusterEndpoints:
+    publicAccess: true
+    privateAccess: true
+
+#  publicAccessCidrs:
+#   - "210.100.100.0/32"
+#   - "59.10.176.2/32"
+
+managedNodeGroups:
+  - name: moon-cluster-ng
+    instanceType: t3.medium
+    # minSize: 1                 # 최소 1대 유지
+    # maxSize: 3                 # 최대 3대까지 확장 가능
+    # desiredCapacity: 2         # 초기 생성할 노드 개수
+    desiredCapacity: 3
+    volumeSize: 20 
+    privateNetworking: true # 노드들을 외부 인터넷에 노출되지 않는 프라이빗 서브넷에 배치
+    # securityGroups:
+    #  attachIDs: ["sg-xxxxxxxxxxxx"] # 이미 만들어두신 보안 그룹 ID
+    iam:
+      withAddonPolicies:
+        imageBuilder: true # ECR 이미지 접근 권한
+        autoScaler: true # Cluster Autoscaler 사용을 위한 권한
+        albIngress: true # 로드밸런서 관련 기본 권한을 노드에 자동으로 부여
+        cloudWatch: true # 로그 전송을 위한 CloudWatch 권한
+
+iam:
+  withOIDC: true # 쿠버네티스 서비스 계정에 IAM 역할을 부여하기 위한 설정 (필수)

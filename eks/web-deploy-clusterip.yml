@@ -1,0 +1,97 @@
+# ####################################################################################################
+# IV. 애플리케이션 배포: Nginx 웹서버 + FastAPI (로드밸런서 포함)
+# ====================================================================================================
+# 1. Service: 외부에서 접속 가능한 로드밸런서(대문) 정의 : web-deployment.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-project-svc # 서비스 이름
+spec:
+  type: ClusterIP
+  selector:
+    app: web-project # 위에서 만든 nginx 라벨을 가진 파드들로 트래픽을 전달
+  ports:
+    - name: http # [리스너 1] 이름 지정 (포트가 여러 개일 땐 필수)
+      protocol: TCP
+      port: 80 # 로드밸런서가 외부에서 받는 포트
+      targetPort: 80 # 실제 파드로 전달되는 포트
+    - name: custom-port # [리스너 2] 추가된 리스너
+      protocol: TCP
+      port: 8000 # 외부에서 8080으로 접속하면
+      targetPort: 8000 # 파드의 80번으로 전달 (포트 포워딩 역할)
+---
+# 2. Ingress를 통해 ALB를 생성합니다
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-project-svc
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing # internet-facing(외부공개)/internal(내부)
+    alb.ingress.kubernetes.io/target-type: ip # instance 또는 ip(파드 직접 지정, VPC CNI환경이 완벽해야 함)
+    alb.ingress.kubernetes.io/security-groups: sg-0ed5d716165c1f726
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+
+    alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=60
+
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTP": 8000}]'
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-project-svc
+                port:
+                  number: 80
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: web-project-svc
+                port:
+                  number: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web-project
+  template:
+    metadata:
+      labels:
+        app: web-project
+    spec:
+      containers:
+        - name: nginx
+          image: 036333380579.dkr.ecr.ap-northeast-2.amazonaws.com/moon9659/nginx:aws-test
+          ports:
+            - containerPort: 80 # 컨테이너 안에서 Nginx가 사용하는 포트
+          resources: # [중요] HPA가 CPU 사용량을 계산하기 위한 기준 설정
+            requests:
+              cpu: "100m" # [예약] "최소한 이만큼은 보장해줘" (스케줄링 기준)
+              memory: "128Mi"
+            limits:
+              cpu: "250m" # [한계] "아무리 바빠도 0.5코어 이상은 쓰지마" (강제 제한)
+              memory: "256Mi"
+
+        # 2번 컨테이너: FastAPI (Application 역할)
+#        - name: fastapi
+#          image: 626635419731.dkr.ecr.ap-northeast-1.amazonaws.com/csjin/fastapi:3.14-slim
+#          ports:
+#            - containerPort: 8000 # FastAPI가 사용하는 포트
+#          resources:
+#            requests:
+#              cpu: "100m" # [예약] "최소한 이만큼은 보장해줘" (스케줄링 기준)
+#              memory: "128Mi"
+#            limits:
+#              cpu: "500m" # [한계] "아무리 바빠도 0.5코어 이상은 쓰지마" (강제 제한)
+#              memory: "256Mi"
